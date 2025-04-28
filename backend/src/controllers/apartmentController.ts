@@ -9,7 +9,6 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
-// CLOUDINARY_URL=cloudinary://668673788526413:3l4KoSRT7YNRKIWO6itxWEc2N1I@dg4l2eelg
 
 // Upload a Multer file to Cloudinary via Data URI
 const uploadToCloudinary = async (
@@ -28,9 +27,21 @@ const uploadToCloudinary = async (
  */
 export const listApartments: RequestHandler = async (req, res, next) => {
   try {
-    const { search, minPrice, maxPrice, rooms } = req.query;
+    const { search, project, minPrice, maxPrice, rooms } = req.query;
     const filter: any = {};
-    // ... existing filter logic ...
+
+    if (search) {
+      const q = String(search).trim();
+      const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      filter.$or = [{ unitName: re }, { unitNumber: re }, { project: re }];
+    }
+    if (project) filter.project = String(project);
+    if (rooms) filter.rooms = Number(rooms);
+    if (minPrice || maxPrice) {
+      filter.price = {};
+      if (minPrice) filter.price.$gte = Number(minPrice);
+      if (maxPrice) filter.price.$lte = Number(maxPrice);
+    }
     const apartments = await Apartment.find(filter).sort({ createdAt: -1 });
     res.status(200).json(apartments);
     return;
@@ -65,7 +76,6 @@ export const getApartment: RequestHandler = async (req, res, next) => {
 
 /**
  * POST /api/apartments
- * Use multer.upload.array('images') to populate req.files
  */
 export const createApartment: RequestHandler = async (req, res, next) => {
   try {
@@ -77,14 +87,23 @@ export const createApartment: RequestHandler = async (req, res, next) => {
         images.push(url);
       }
     }
-    const { unitName, unitNumber, description, location, price, area, rooms } =
-      req.body as any;
+    const {
+      unitName,
+      unitNumber,
+      project,
+      description,
+      location,
+      price,
+      area,
+      rooms,
+    } = req.body as any;
     const locationObj =
       typeof location === 'string' ? JSON.parse(location) : location;
 
     const newApt = new Apartment({
       unitName,
       unitNumber,
+      project,
       description,
       location: locationObj,
       price: Number(price),

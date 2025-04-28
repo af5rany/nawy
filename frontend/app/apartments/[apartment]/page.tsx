@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Bed, LayoutGrid, MapPin } from "lucide-react";
 import Image from "next/image";
@@ -24,7 +25,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ apartment: string }>;
 }): Promise<Metadata> {
-  const { apartment } = await params; // <-- await here
+  const { apartment } = await params;
   try {
     const apt = await fetchApartment(apartment);
     return {
@@ -37,43 +38,11 @@ export async function generateMetadata({
 }
 
 async function fetchApartment(id: string): Promise<ApartmentDetail> {
-  try {
-    const url = `${process.env.NEXT_PUBLIC_API_URL}/apartments/${id}`;
-    console.log(`[fetchApartment] fetching ${url}`);
-
-    const res = await fetch(url, { cache: "no-store" });
-
-    if (res.status === 404) {
-      throw new Error(`Apartment not found (ID: ${id})`);
-    }
-    if (!res.ok) {
-      // try to extract any error text from the body
-      const bodyText = await res.text().catch(() => "");
-      throw new Error(
-        `Failed to fetch apartment ${id}: ${res.status} ${res.statusText}` +
-          (bodyText ? ` — ${bodyText}` : "")
-      );
-    }
-
-    const data = await res.json();
-
-    // sanity check
-    if (typeof data !== "object" || data === null || !("_id" in data)) {
-      throw new Error(
-        `Invalid data format for apartment ${id}: expected object with _id`
-      );
-    }
-
-    return data as ApartmentDetail;
-  } catch (err: unknown) {
-    console.error(`[fetchApartment] error loading ID=${id}`, err);
-    if (err instanceof Error) {
-      // rethrow the original error so caller can handle it
-      throw err;
-    }
-    // wrap non-Error exceptions
-    throw new Error(`Unknown error fetching apartment ${id}`);
-  }
+  const url = `${process.env.NEXT_PUBLIC_API_URL}/apartments/${id}`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (res.status === 404) throw new Error("Not Found");
+  if (!res.ok) throw new Error("Failed to fetch");
+  return res.json();
 }
 
 export default async function ApartmentDetailPage({
@@ -82,68 +51,83 @@ export default async function ApartmentDetailPage({
   params: Promise<{ apartment: string }>;
 }) {
   const { apartment: id } = await params;
-
   let apt: ApartmentDetail;
   try {
     apt = await fetchApartment(id);
   } catch (err: any) {
-    if (err.message === "Not Found") {
-      notFound();
-    }
+    if (err.message === "Not Found") notFound();
     return (
-      <main className="container mx-auto p-8">
-        <p className="text-center text-red-500">
-          Unable to load apartment details.
-        </p>
+      <main className="min-h-screen flex items-center justify-center bg-gray-50 p-8">
+        <p className="text-red-500">Unable to load apartment details.</p>
       </main>
     );
   }
 
   return (
-    <main className="container mx-auto p-8 space-y-6">
-      {/* <button
-        onClick={() => window.history.back()}
-        className="text-indigo-600 hover:underline"
-      >
-        &larr; Back to listings
-      </button> */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="flex flex-col space-y-4">
-          {apt.images.map((img, i) => (
-            <Image
-              key={i}
-              src={img || "/placeholder.svg"}
-              alt={`${apt.unitName} image ${i + 1}`}
-              width={i === 0 ? 600 : 300}
-              height={i === 0 ? 400 : 200}
-              className={`rounded-lg object-cover ${i === 0 ? "h-80" : "h-48"}`}
-            />
-          ))}
+    <main className="min-h-screen bg-gray-50 py-12 px-4">
+      <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+          <Link
+            href="/apartments"
+            className="text-indigo-600 hover:underline flex items-center"
+          >
+            ← Back to listings
+          </Link>
+          <span className="text-gray-500 text-sm">Unit {apt.unitNumber}</span>
         </div>
-        <div className="space-y-4">
-          <h1 className="text-3xl font-bold text-gray-800">{apt.unitName}</h1>
-          <p className="text-indigo-600 text-2xl font-semibold">
-            ${apt.price.toLocaleString()}/mo
-          </p>
-          <div className="flex flex-wrap gap-4 text-gray-600">
-            <div className="flex items-center space-x-1">
-              <Bed className="w-5 h-5" />
-              <span>
-                {apt.rooms} bed{apt.rooms > 1 ? "s" : ""}
-              </span>
+
+        <div className="md:flex">
+          {/* Left: Images */}
+          <div className="md:w-1/2 bg-gray-100 p-4">
+            <div className="mb-4 overflow-hidden rounded-lg">
+              <Image
+                src={apt.images[0] || "/placeholder.svg"}
+                alt={`${apt.unitName} main`}
+                width={600}
+                height={400}
+                className="w-full h-64 object-cover"
+              />
             </div>
-            <div className="flex items-center space-x-1">
-              <LayoutGrid className="w-5 h-5" />
-              <span>{apt.area} m²</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <MapPin className="w-5 h-5" />
-              <span>
-                {apt.location.address}, {apt.location.city}
-              </span>
+            <div className="grid grid-cols-4 gap-2">
+              {apt.images.slice(1).map((img, i) => (
+                <div key={i} className="overflow-hidden rounded-lg">
+                  <Image
+                    src={img}
+                    alt={`${apt.unitName} ${i + 2}`}
+                    width={150}
+                    height={100}
+                    className="w-full h-24 object-cover hover:scale-105 transition"
+                  />
+                </div>
+              ))}
             </div>
           </div>
-          <p className="text-gray-700 whitespace-pre-line">{apt.description}</p>
+
+          {/* Right: Details */}
+          <div className="md:w-1/2 p-6 space-y-6">
+            <h1 className="text-4xl font-bold text-gray-800">{apt.unitName}</h1>
+            <p className="text-3xl font-semibold text-indigo-600">
+              ${apt.price.toLocaleString()}/mo
+            </p>
+
+            <div className="flex flex-wrap gap-3">
+              <span className="flex items-center gap-1 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
+                <Bed className="w-4 h-4" /> {apt.rooms} bed
+                {apt.rooms > 1 ? "s" : ""}
+              </span>
+              <span className="flex items-center gap-1 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
+                <LayoutGrid className="w-4 h-4" /> {apt.area} m²
+              </span>
+              <span className="flex items-center gap-1 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
+                <MapPin className="w-4 h-4" /> {apt.location.address},{" "}
+                {apt.location.city}
+              </span>
+            </div>
+
+            <div className="prose prose-indigo max-w-none text-gray-700">
+              <p>{apt.description}</p>
+            </div>
+          </div>
         </div>
       </div>
     </main>
