@@ -1,0 +1,53 @@
+# Apartment Listing App
+
+A full-stack application for browsing and managing apartment listings, built with Next.js (frontend), Express + MongoDB (backend), and Cloudinary for image hosting. Docker Compose is used to run the entire stack.
+
+## Prerequisites
+
+- [Docker](https://www.docker.com/) & Docker Compose installed
+
+## Environment Variables
+
+### Backend
+
+1. Navigate to the `backend/` directory:
+   cd backend
+
+2. Create a file named `.env` with the following contents:
+
+# backend/.env
+
+PORT=<YOUR_PORT> # e.g. 5000
+NODE_ENV=production # or development
+MONGO_URI=<YOUR_MONGO_URI> # e.g. mongodb://mongo:27017/apartments
+CLOUDINARY_CLOUD_NAME=<YOUR_CLOUD_NAME>
+CLOUDINARY_API_KEY=<YOUR_API_KEY>
+CLOUDINARY_API_SECRET=<YOUR_API_SECRET>
+
+### Frontend
+
+1. Navigate to the `frontend/` directory from root folder:
+   cd frontend
+
+2. Create a file named `.env` with the following contents:
+
+# frontend/.env
+
+NEXT_PUBLIC_API_URL=http://backend:<YOUR_BACKEND_PORT>/api
+
+## Running with Docker Compose
+
+From the project root (where `docker-compose.yml` lives), ensure Docker is running, then execute:
+docker-compose up --build
+
+This will:
+
+1. Build the backend and frontend Docker images.
+2. Start the MongoDB, backend API, and Next.js frontend containers.
+
+Once running:
+
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:5000/api
+
+---

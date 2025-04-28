@@ -80,7 +80,7 @@ export default async function ApartmentDetailPage({
           {/* Left: Images */}
           <div className="md:w-1/2 bg-gray-100 p-4">
             <div className="mb-4 overflow-hidden rounded-lg">
-              <Image
+              <img
                 src={apt.images[0] || "/placeholder.svg"}
                 alt={`${apt.unitName} main`}
                 width={600}
