@@ -19,9 +19,13 @@ export interface Apartment {
 
 interface ApartmentCardProps {
   apartment: Apartment;
+  onDeleteSuccess: () => void;
 }
 
-export default function ApartmentCard({ apartment }: ApartmentCardProps) {
+export default function ApartmentCard({
+  apartment,
+  onDeleteSuccess,
+}: ApartmentCardProps) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
 
@@ -34,7 +38,8 @@ export default function ApartmentCard({ apartment }: ApartmentCardProps) {
       });
       if (!res.ok) throw new Error(`Failed (${res.status})`);
       // refresh the current route so the deleted card disappears
-      router.refresh();
+      onDeleteSuccess();
+      // router.refresh();
     } catch (err) {
       console.error("Delete error:", err);
       alert("Could not delete. Try again.");

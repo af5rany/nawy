@@ -30,7 +30,11 @@ interface ValidationErrors {
   images?: string;
 }
 
-export default function AddApartmentForm() {
+export default function AddApartmentForm({
+  onSuccess,
+}: {
+  onSuccess: () => void;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState<AddApartmentFormData>({
     unitName: "",
@@ -154,9 +158,9 @@ export default function AddApartmentForm() {
         const text = await res.text().catch(() => "");
         throw new Error(`Submit failed (${res.status}) ${text}`);
       }
-
+      onSuccess();
       close();
-      router.refresh();
+      // router.refresh();
     } catch (err: any) {
       setSubmitError(err.message || "Something went wrong");
       setLoading(false);
@@ -372,30 +376,7 @@ export default function AddApartmentForm() {
                     : "hover:bg-indigo-700"
                 }`}
               >
-                {loading ? (
-                  <svg
-                    className="animate-spin h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v4l-3.5 3.5L12 12H4z"
-                    ></path>
-                  </svg>
-                ) : (
-                  "Submit"
-                )}
+                {loading ? "Loading..." : "Submit"}
               </button>
             </form>
           </div>

@@ -1,7 +1,6 @@
 // app/apartments/page.tsx
 "use client";
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import ApartmentCard, { Apartment } from "../_components/ApartmentCard";
 import AddApartmentForm from "../_components/AddApartmentForm";
 
@@ -11,34 +10,36 @@ export default function ApartmentsPage() {
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // debounce the search input
+  // debounce
   useEffect(() => {
     const h = setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => clearTimeout(h);
   }, [search]);
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams();
-        if (debouncedSearch) params.set("search", debouncedSearch);
+  // our loader, memoized so we can call it on demand
+  const loadApartments = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (debouncedSearch) params.set("search", debouncedSearch);
 
-        const res = await fetch(`api/apartments?${params.toString()}`, {
-          cache: "no-store",
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as Apartment[];
-        setApartments(data);
-      } catch (err) {
-        console.error("Failed to load apartments:", err);
-        setApartments([]);
-      } finally {
-        setLoading(false);
-      }
+      const res = await fetch(`api/apartments?${params}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setApartments(await res.json());
+    } catch (err) {
+      console.error(err);
+      setApartments([]);
+    } finally {
+      setLoading(false);
     }
-    load();
   }, [debouncedSearch]);
+
+  // fetch on mount + when search changes
+  useEffect(() => {
+    loadApartments();
+  }, [loadApartments]);
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -49,26 +50,28 @@ export default function ApartmentsPage() {
       <div className="mb-6">
         <input
           type="text"
-          placeholder="Search by unit, number or project…"
+          placeholder="Search…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          aria-label="Search apartments"
+          className="w-full border p-2 rounded focus:ring-indigo-500"
         />
       </div>
 
-      <AddApartmentForm />
+      {/* Pass loadApartments as onSuccess callback */}
+      <AddApartmentForm onSuccess={loadApartments} />
 
       {loading ? (
         <p className="text-center">Loading…</p>
       ) : apartments.length === 0 ? (
-        <div className="text-center text-gray-500 space-y-2">
-          <p>No apartments found.</p>
-        </div>
+        <p className="text-center text-gray-500">No apartments found.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {apartments.map((apt) => (
-            <ApartmentCard key={apt._id} apartment={apt} />
+            <ApartmentCard
+              key={apt._id}
+              apartment={apt}
+              onDeleteSuccess={loadApartments} // same here!
+            />
           ))}
         </div>
       )}
